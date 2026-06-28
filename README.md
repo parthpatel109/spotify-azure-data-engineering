@@ -620,40 +620,65 @@ The Gold layer contains business-ready datasets optimized for analytics and repo
 Unlike the Silver layer, the Gold layer focuses on maintaining historical records using **Slowly Changing Dimension Type 2 (SCD Type 2)**.
 
 
-# 🔄 Delta Live Tables (DLT)
+# ⚡ Delta Live Tables (DLT)
 
-The Gold layer is implemented using **Delta Live Tables**, which simplifies streaming ETL, enforces data quality rules, and automates dependency management.
+The Gold layer is implemented using **Delta Live Tables (DLT)** to automate streaming data processing, enforce data quality, and implement Slowly Changing Dimension (SCD Type 2).
+
+Unlike traditional ETL pipelines, DLT automatically manages table dependencies, pipeline execution, and data quality while reducing operational overhead.
 
 <p align="center">
     <img src="images/dlt-pipeline.png" width="95%">
 </p>
 
-### Pipeline Components
+### DLT Pipeline Overview
 
-- dimdate
-- dimtrack
-- dimuser
-- factstream
+The pipeline consists of two stages for each dataset:
 
-Each dataset contains:
+- **Staging Tables (_stg)** – Streaming tables that ingest data from the Silver layer.
+- **Target Gold Tables** – Final curated tables that maintain historical records using Auto CDC.
 
-- Streaming Staging Table
-- Final Gold Table
+The pipeline processes the following datasets:
+
+| Staging Table | Target Table |
+|---------------|--------------|
+| dimdate_stg | dimdate |
+| dimtrack_stg | dimtrack |
+| dimuser_stg | dimuser |
+| factstream_stg | factstream |
+
+The graphical execution view illustrates how Delta Live Tables automatically manages dependencies between staging and target tables while executing the pipeline in the correct order.
 
 
-## Data Quality Expectations
+## Data Quality
 
-Before processing data into Gold tables, Delta Live Tables validates incoming records.
+Before records are written into the Gold layer, Delta Live Tables validates incoming data using expectations.
 
-Example validations include:
+Example:
 
-- Primary Key cannot be NULL
-- Invalid records are automatically dropped
-- Streaming tables remain clean
-- Data quality is continuously enforced
+- `user_id IS NOT NULL`
 
-This ensures only trusted records reach downstream analytics.
+Invalid records are automatically discarded before reaching downstream tables, ensuring trusted analytical datasets.
 
+
+## Auto CDC (Change Data Capture)
+
+The Gold layer uses **DLT Auto CDC** to detect changes in incoming records.
+
+Business Key:
+
+- `user_id`
+
+Sequence Column:
+
+- `updated_at`
+
+Whenever a record changes:
+
+- Previous version is retained.
+- New version is inserted.
+- Historical data is preserved automatically.
+
+This implements **Slowly Changing Dimension Type 2 (SCD Type 2)** without writing complex merge logic.
 
 # 🔁 Slowly Changing Dimension (SCD Type 2)
 
