@@ -680,86 +680,56 @@ Whenever a record changes:
 
 This implements **Slowly Changing Dimension Type 2 (SCD Type 2)** without writing complex merge logic.
 
+
 # 🔁 Slowly Changing Dimension (SCD Type 2)
 
-The project implements **SCD Type 2** using **DLT Auto CDC**.
+To preserve historical changes in dimension tables, the Gold layer implements **Slowly Changing Dimension Type 2 (SCD Type 2)** using **Delta Live Tables Auto CDC**.
 
-Instead of overwriting existing records, historical versions are preserved whenever changes occur.
+Unlike traditional overwrite operations, SCD Type 2 maintains a complete history of changes by creating a new record whenever a tracked attribute changes.
 
-### Workflow
+## Implementation Details
 
-```text
-Silver Table
-        │
-        ▼
-Streaming Staging Table
-        │
-        ▼
-Auto CDC
-        │
-        ▼
-Compare Business Key
-        │
-        ▼
-Existing Record?
-        │
- ┌──────┴────────┐
- │               │
- ▼               ▼
-Insert       Expire Previous
-New Row      Insert Updated Row
-        │
-        ▼
-Gold Dimension
-```
-
-### Business Key
-
-- user_id
-
-### Sequence Column
-
-- updated_at
-
-### Benefits
-
-- Historical tracking
-- Auditability
-- Change history
-- Point-in-time reporting
-- Regulatory compliance
+| Configuration | Value |
+|--------------|-------|
+| Technology | Delta Live Tables |
+| CDC Method | Auto CDC |
+| SCD Type | Type 2 |
+| Business Key | user_id |
+| Sequence Column | updated_at |
 
 
-# 📊 Gold Layer Output
+## Workflow
 
-| Table | Description |
-|--------|-------------|
-| dimuser | Historical user dimension |
-| dimtrack | Historical track dimension |
-| dimdate | Date dimension |
-| factstream | Curated streaming facts |
-
-These Gold tables are optimized for downstream reporting and Business Intelligence tools.
-
-
-# ⭐ Databricks Features Implemented
-
-- Azure Databricks
-- PySpark
-- Structured Streaming
-- Databricks Auto Loader
-- Delta Lake
-- Unity Catalog
-- Delta Live Tables
-- Auto CDC
-- Data Quality Expectations
-- Streaming Tables
-- Checkpointing
-- SCD Type 2
-- Business Transformations
-- Incremental Processing
+1. Read streaming data from the Silver layer.
+2. Validate incoming records using DLT Expectations.
+3. Identify records using the business key (`user_id`).
+4. Compare incoming records with existing Gold records.
+5. If no changes are detected, no action is taken.
+6. If changes are detected:
+   - The existing record is marked as expired.
+   - A new version is inserted.
+7. Historical records remain available for auditing and reporting.
 
 
+## Why SCD Type 2?
 
+Implementing SCD Type 2 provides several business benefits:
 
-  
+- Preserves historical changes
+- Enables point-in-time reporting
+- Supports audit and compliance requirements
+- Tracks attribute evolution over time
+- Maintains a complete history of dimension records
+
+The project uses **DLT Auto CDC** to automate this process, eliminating the need for complex MERGE statements while ensuring reliable historical tracking.
+
+# 🚧 Challenges Faced & Solutions
+
+| Challenge | Solution |
+|-----------|----------|
+| Processing only changed records | Implemented incremental loading using CDC watermark (`updated_at`). |
+| Managing multiple source tables | Built a metadata-driven pipeline with dynamic parameterization. |
+| Maintaining historical records | Implemented SCD Type 2 using Delta Live Tables Auto CDC. |
+| Ensuring data quality | Added DLT Expectations to validate incoming records. |
+| Monitoring pipeline failures | Integrated Azure Logic Apps for automated email notifications. |
+| Organizing datasets | Implemented Medallion Architecture with Bronze, Silver, and Gold layers. |
