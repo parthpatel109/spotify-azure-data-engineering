@@ -470,5 +470,271 @@ Monitoring enables quick identification of failed activities while providing com
 - Azure Logic Apps integration
 
 
+# 🚀 Azure Databricks
+
+Azure Databricks is the core data processing engine of this project. It performs distributed data transformation using **PySpark**, processes streaming data with **Auto Loader**, and builds analytics-ready datasets following the **Medallion Architecture**.
+
+The Databricks workspace is organized using **Unity Catalog**, which provides centralized governance and metadata management across all layers.
+
+<p align="center">
+    <img src="images/databricks-catalog.png" width="95%">
+</p>
+
+
+# 📚 Unity Catalog
+
+Unity Catalog provides centralized governance for all data assets created within the Databricks workspace.
+
+The project organizes data into dedicated schemas for each Medallion layer.
+
+### Catalog Structure
+
+```text
+spotify_cata
+│
+├── silver
+│   ├── dimartist
+│   ├── dimdate
+│   ├── dimtrack
+│   ├── dimuser
+│   └── factstream
+│
+└── gold
+    ├── dimdate
+    ├── dimdate_stg
+    ├── dimtrack
+    ├── dimtrack_stg
+    ├── dimuser
+    ├── dimuser_stg
+    ├── factstream
+    └── factstream_stg
+```
+
+### Benefits
+
+- Centralized Metadata Management
+- Data Governance
+- Access Control
+- Data Discovery
+- Secure Table Management
+- Simplified Collaboration
+
+Unity Catalog acts as the single source of truth for all Delta tables within the project.
+
+
+# ⚡ Databricks Auto Loader
+
+The project uses **Databricks Auto Loader** to continuously ingest new files from the Bronze layer into the Silver layer.
+
+Auto Loader automatically detects newly arrived files without requiring full directory scans, making it highly scalable for large datasets.
+
+### Auto Loader Features
+
+- Incremental file ingestion
+- Automatic schema inference
+- Schema evolution
+- Fault tolerance using checkpoints
+- Optimized cloud file discovery
+- Streaming ingestion
+
+### Processing Workflow
+
+```text
+Bronze Container
+        │
+        ▼
+Auto Loader
+(cloudFiles)
+        │
+        ▼
+PySpark Streaming
+        │
+        ▼
+Business Transformations
+        │
+        ▼
+Silver Delta Tables
+```
+
+
+# 🥈 Silver Layer
+
+The Silver layer transforms raw Bronze data into clean, standardized, and analytics-ready datasets.
+
+All transformations are implemented using **PySpark Structured Streaming**, ensuring scalable and incremental processing.
+
+### Responsibilities
+
+- Data cleansing
+- Data validation
+- Standardization
+- Business transformations
+- Schema enforcement
+- Delta table creation
+
+
+## Business Transformations
+
+### DimUser
+
+- Converts user names to uppercase
+- Cleans and standardizes user attributes
+
+### DimTrack
+
+- Removes unwanted characters from track names
+- Creates a derived **Duration Category** (Low, Medium, High)
+
+### DimArtist
+
+- Cleans artist information
+- Standardizes dimension records
+
+### DimDate
+
+- Prepares reporting-friendly date dimension
+
+### FactStream
+
+- Processes streaming transaction records
+- Standardizes streaming metrics
+
+
+## Silver Layer Output
+
+| Table | Purpose |
+|--------|---------|
+| dimuser | Standardized user dimension |
+| dimartist | Artist master data |
+| dimtrack | Track metadata |
+| dimdate | Calendar dimension |
+| factstream | Streaming fact table |
+
+All Silver datasets are stored as **Delta Tables** inside Azure Data Lake Storage Gen2.
+
+
+# 🥇 Gold Layer
+
+The Gold layer contains business-ready datasets optimized for analytics and reporting.
+
+Unlike the Silver layer, the Gold layer focuses on maintaining historical records using **Slowly Changing Dimension Type 2 (SCD Type 2)**.
+
+
+# 🔄 Delta Live Tables (DLT)
+
+The Gold layer is implemented using **Delta Live Tables**, which simplifies streaming ETL, enforces data quality rules, and automates dependency management.
+
+<p align="center">
+    <img src="images/dlt-pipeline.png" width="95%">
+</p>
+
+### Pipeline Components
+
+- dimdate
+- dimtrack
+- dimuser
+- factstream
+
+Each dataset contains:
+
+- Streaming Staging Table
+- Final Gold Table
+
+
+## Data Quality Expectations
+
+Before processing data into Gold tables, Delta Live Tables validates incoming records.
+
+Example validations include:
+
+- Primary Key cannot be NULL
+- Invalid records are automatically dropped
+- Streaming tables remain clean
+- Data quality is continuously enforced
+
+This ensures only trusted records reach downstream analytics.
+
+
+# 🔁 Slowly Changing Dimension (SCD Type 2)
+
+The project implements **SCD Type 2** using **DLT Auto CDC**.
+
+Instead of overwriting existing records, historical versions are preserved whenever changes occur.
+
+### Workflow
+
+```text
+Silver Table
+        │
+        ▼
+Streaming Staging Table
+        │
+        ▼
+Auto CDC
+        │
+        ▼
+Compare Business Key
+        │
+        ▼
+Existing Record?
+        │
+ ┌──────┴────────┐
+ │               │
+ ▼               ▼
+Insert       Expire Previous
+New Row      Insert Updated Row
+        │
+        ▼
+Gold Dimension
+```
+
+### Business Key
+
+- user_id
+
+### Sequence Column
+
+- updated_at
+
+### Benefits
+
+- Historical tracking
+- Auditability
+- Change history
+- Point-in-time reporting
+- Regulatory compliance
+
+
+# 📊 Gold Layer Output
+
+| Table | Description |
+|--------|-------------|
+| dimuser | Historical user dimension |
+| dimtrack | Historical track dimension |
+| dimdate | Date dimension |
+| factstream | Curated streaming facts |
+
+These Gold tables are optimized for downstream reporting and Business Intelligence tools.
+
+
+# ⭐ Databricks Features Implemented
+
+- Azure Databricks
+- PySpark
+- Structured Streaming
+- Databricks Auto Loader
+- Delta Lake
+- Unity Catalog
+- Delta Live Tables
+- Auto CDC
+- Data Quality Expectations
+- Streaming Tables
+- Checkpointing
+- SCD Type 2
+- Business Transformations
+- Incremental Processing
+
+
+
 
   
